@@ -31,6 +31,13 @@ MARIADB_VERSION="11.4.4"
 
 # Options
 INSTALL_MARIADB=false
+CREATE_EXTRA_USER=false
+
+# Default credentials
+DB_ADMIN_USER="mini"
+DB_ADMIN_PASS="stack"
+DB_EXTRA_USER="horse"
+DB_EXTRA_PASS="horse"
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -82,11 +89,28 @@ ask_mariadb() {
         esac
     done
     
+    if [ "$INSTALL_MARIADB" = true ]; then
+        echo ""
+        while true; do
+            read -p "Create additional database user? [y/N]: " yn
+            case $yn in
+                [Yy]* ) CREATE_EXTRA_USER=true; break;;
+                [Nn]* ) CREATE_EXTRA_USER=false; break;;
+                "" )    CREATE_EXTRA_USER=false; break;;
+                * )     echo "Please answer y or n.";;
+            esac
+        done
+    fi
+    
     echo ""
     log_info "Architecture: $ARCH"
     log_info "Install directory: $SCRIPT_DIR"
     if [ "$INSTALL_MARIADB" = true ]; then
         log_info "Database: MariaDB"
+        log_info "Admin user: $DB_ADMIN_USER"
+        if [ "$CREATE_EXTRA_USER" = true ]; then
+            log_info "Extra user: $DB_EXTRA_USER"
+        fi
     else
         log_info "Database: SQLite (built-in)"
     fi
@@ -227,7 +251,75 @@ phase_init_db() {
 }
 
 #-------------------------------------------------------------------------------
-# Phase 5: Create test page
+# Phase 5: Configure MariaDB users
+#-------------------------------------------------------------------------------
+
+phase_setup_users() {
+    log_step "Configuring MariaDB users..."
+    
+    # Generate temp config
+    cat > ./config/my.cnf << EOF
+[mysqld]
+user    = $(whoami)
+basedir = $SCRIPT_DIR/mariadb
+datadir = $SCRIPT_DIR/mariadb/data
+socket  = $SCRIPT_DIR/mariadb/run/mariadb.sock
+port    = 3307
+skip-networking
+bind-address = 127.0.0.1
+
+[client]
+socket  = $SCRIPT_DIR/mariadb/run/mariadb.sock
+EOF
+
+    # Start MariaDB temporarily
+    log_info "Starting MariaDB temporarily..."
+    ./mariadb/bin/mariadbd-safe --defaults-file=./config/my.cnf &
+    MARIADB_PID=$!
+    sleep 4
+    
+    # Create admin user and secure root
+    log_info "Creating admin user '$DB_ADMIN_USER'..."
+    ./mariadb/bin/mysql --socket=./mariadb/run/mariadb.sock -u root << EOF
+-- Create admin user with full privileges
+CREATE USER '$DB_ADMIN_USER'@'localhost' IDENTIFIED BY '$DB_ADMIN_PASS';
+GRANT ALL PRIVILEGES ON *.* TO '$DB_ADMIN_USER'@'localhost' WITH GRANT OPTION;
+
+CREATE USER '$DB_ADMIN_USER'@'127.0.0.1' IDENTIFIED BY '$DB_ADMIN_PASS';
+GRANT ALL PRIVILEGES ON *.* TO '$DB_ADMIN_USER'@'127.0.0.1' WITH GRANT OPTION;
+
+-- Disable root access
+ALTER USER 'root'@'localhost' IDENTIFIED BY '$(openssl rand -base64 32)';
+
+FLUSH PRIVILEGES;
+EOF
+
+    # Create extra user if requested
+    if [ "$CREATE_EXTRA_USER" = true ]; then
+        log_info "Creating extra user '$DB_EXTRA_USER'..."
+        ./mariadb/bin/mysql --socket=./mariadb/run/mariadb.sock -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" << EOF
+-- Create extra user with normal privileges
+CREATE USER '$DB_EXTRA_USER'@'localhost' IDENTIFIED BY '$DB_EXTRA_PASS';
+CREATE USER '$DB_EXTRA_USER'@'127.0.0.1' IDENTIFIED BY '$DB_EXTRA_PASS';
+
+-- Grant usage (can connect but no privileges until granted per-database)
+GRANT USAGE ON *.* TO '$DB_EXTRA_USER'@'localhost';
+GRANT USAGE ON *.* TO '$DB_EXTRA_USER'@'127.0.0.1';
+
+FLUSH PRIVILEGES;
+EOF
+    fi
+    
+    # Stop MariaDB
+    log_info "Stopping MariaDB..."
+    ./mariadb/bin/mysqladmin --socket=./mariadb/run/mariadb.sock -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" shutdown 2>/dev/null || kill $MARIADB_PID 2>/dev/null || true
+    sleep 2
+    
+    log_info "MariaDB users configured"
+}
+
+#-------------------------------------------------------------------------------
+# Phase 6: Create test page
 #-------------------------------------------------------------------------------
 
 phase_test_mariadb() {
@@ -243,7 +335,7 @@ phase_test_mariadb() {
 $dbStatus = false;
 $dbError = '';
 try {
-    $pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'root', '');
+    $pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'mini', 'stack');
     $dbStatus = true;
     $dbVersion = $pdo->query('SELECT VERSION()')->fetchColumn();
 } catch (Exception $e) {
@@ -348,6 +440,7 @@ main() {
     if [ "$INSTALL_MARIADB" = true ]; then
         phase_mariadb
         phase_init_db
+        phase_setup_users
         phase_test_mariadb
     else
         phase_test_sqlite
@@ -364,6 +457,12 @@ main() {
     echo ""
     if [ "$INSTALL_MARIADB" = true ]; then
         echo "  Database:  MariaDB on port 3307"
+        echo "  User:      $DB_ADMIN_USER"
+        echo "  Password:  $DB_ADMIN_PASS"
+        if [ "$CREATE_EXTRA_USER" = true ]; then
+            echo ""
+            echo "  Extra user: $DB_EXTRA_USER (password: $DB_EXTRA_PASS)"
+        fi
     else
         echo "  Database:  SQLite (htdocs/data.db)"
     fi

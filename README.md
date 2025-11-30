@@ -13,8 +13,6 @@ A portable, self-contained PHP web stack.
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ministack.git
-cd ministack/webserver
 ./install.sh
 ./start.sh
 ```
@@ -22,12 +20,6 @@ cd ministack/webserver
 Open **http://localhost:8080**
 
 ## Installation Options
-
-The installer asks if you want MariaDB:
-
-```
-Install MariaDB? [y/N]:
-```
 
 | Choice | Result | Size |
 |--------|--------|------|
@@ -44,12 +36,12 @@ SQLite is built into PHP — perfect for blogs, small apps, and prototypes.
 ./stop.sh       # Stop everything
 ```
 
-## Ports
+## Ports & Credentials
 
-| Service | Port |
-|---------|------|
-| Web | 8080 |
-| MariaDB | 3307 |
+| Service | Port | User | Password |
+|---------|------|------|----------|
+| Web | 8080 | — | — |
+| MariaDB | 3307 | `mini` | `stack` |
 
 No root required — uses unprivileged ports.
 
@@ -57,7 +49,7 @@ No root required — uses unprivileged ports.
 
 ```
 webserver/
-├── frankenphp         # Web server + PHP (downloaded)
+├── frankenphp/        # Web server + PHP (downloaded)
 ├── mariadb/           # Database (optional, downloaded)
 ├── htdocs/            # Your PHP files go here
 │   └── index.php      # Test page
@@ -71,9 +63,6 @@ webserver/
 ## Requirements
 
 - Linux x86_64 or ARM64
-- `curl` or `wget`
-- ~50MB disk space (without MariaDB)
-- ~900MB disk space (with MariaDB)
 
 ## Connecting to the Database
 
@@ -84,26 +73,10 @@ $pdo = new PDO('sqlite:' . __DIR__ . '/data.db');
 
 ### MariaDB (if installed)
 ```php
-$pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'root', '');
+$pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'mini', 'stack');
 ```
 
 CLI access:
 ```bash
-./mariadb/bin/mysql -S ./mariadb/run/mariadb.sock -u root
+./mariadb/bin/mysql -S ./mariadb/run/mariadb.sock -u mini -pstack
 ```
-
-## Portability
-
-The entire stack is self-contained. To move it:
-
-1. Stop the server: `./stop.sh`
-2. Copy/move the `webserver/` folder anywhere
-3. Start again: `./start.sh`
-
-Configs are generated at runtime with correct paths.
-
-## Tech Stack
-
-- [FrankenPHP](https://frankenphp.dev/) — Modern PHP app server built on Caddy
-  - [SQLite](https://sqlite.org/) — Embedded database (built into PHP)
-- [MariaDB](https://mariadb.org/) — MySQL-compatible database
