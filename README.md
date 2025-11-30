@@ -1,14 +1,15 @@
 # ⚡ MINISTACK
 
-A portable, self-contained PHP web stack.
+A portable, self-contained PHP web stack and IRC chat server.
 
-## What's Included
+## What's Installed
 
 | Component | Size | Description |
 |-----------|------|-------------|
 | **FrankenPHP** | ~48MB | Web server + PHP 8.4 in a single binary |
 | ↳ SQLite | *(built-in)* | File-based database included in PHP |
 | **MariaDB** | ~800MB | MySQL-compatible database *(optional)* |
+| **ngIRCd** | ~500KB | Lightweight IRC chat server *(optional)* |
 
 ## Quick Start
 
@@ -42,6 +43,7 @@ SQLite is built into PHP — perfect for blogs, small apps, and prototypes.
 |---------|------|------|----------|
 | Web | 8080 | — | — |
 | MariaDB | 3307 | `mini` | `stack` |
+| IRC | 6667 | `mini` | `stack` |
 
 No root required — uses unprivileged ports.
 
@@ -54,6 +56,14 @@ webserver/
 ├── htdocs/            # Your PHP files go here
 │   └── index.php      # Test page
 ├── config/            # Generated configs
+├── logs/              # Log files
+├── install.sh
+├── start.sh
+└── stop.sh
+
+chatserver/
+├── bin/               # ngIRCd binary (downloaded)
+├── etc/               # Configuration files
 ├── logs/              # Log files
 ├── install.sh
 ├── start.sh
@@ -79,4 +89,19 @@ $pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'mini', 'stack');
 CLI access:
 ```bash
 ./mariadb/bin/mysql -S ./mariadb/run/mariadb.sock -u mini -pstack
+```
+
+## Connecting to IRC
+
+Use any IRC client (mIRC, HexChat, irssi, etc.):
+
+| Setting | Value |
+|---------|-------|
+| Server | `localhost` (or your host IP) |
+| Port | `6667` |
+
+Once connected:
+```
+/join #general
+/oper mini stack
 ```

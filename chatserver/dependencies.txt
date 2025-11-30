@@ -1,0 +1,48 @@
+================================================================================
+                              MINISTACK
+                         Portable IRC Server
+================================================================================
+
+STACK:   ngIRCd (self-contained, no root required)
+TARGET:  Linux x86_64 / ARM64
+
+================================================================================
+                            COMPONENTS
+================================================================================
+
+NGIRCD
+  Version:   26.1
+  Homepage:  https://ngircd.barton.de/
+  GitHub:    https://github.com/ngircd/ngircd
+  Docs:      https://ngircd.barton.de/documentation.php
+
+================================================================================
+                          DIRECTORY STRUCTURE
+================================================================================
+
+chatserver/
+├── bin/                  # ngIRCd binary (downloaded)
+│   └── ngircd
+├── etc/                  # Configuration
+│   ├── ngircd.conf
+│   └── motd.txt
+├── run/                  # Runtime files
+│   └── ngircd.pid
+├── logs/
+├── install.sh            # Downloads/installs ngIRCd
+├── start.sh
+└── stop.sh
+
+================================================================================
+                               USAGE
+================================================================================
+
+First-time:   ./install.sh
+Start:        ./start.sh
+Stop:         ./stop.sh
+Connect:      irc://localhost:6667
+
+Port:         6667 (IRC)
+
+================================================================================
+
