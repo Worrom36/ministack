@@ -1,0 +1,55 @@
+================================================================================
+                              MINISTACK
+                    Portable FrankenPHP + MariaDB
+================================================================================
+
+STACK:   FrankenPHP + MariaDB (self-contained, no root required)
+TARGET:  Linux x86_64 / ARM64
+
+================================================================================
+                            COMPONENTS
+================================================================================
+
+FRANKENPHP
+  Version:   1.3.6
+  PHP:       8.4.2
+  GitHub:    https://github.com/dunglas/frankenphp
+  Releases:  https://github.com/dunglas/frankenphp/releases
+
+MARIADB
+  Version:   11.4.4
+  GitHub:    https://github.com/MariaDB/server
+  Download:  https://mariadb.org/download/ → Generic Linux
+
+================================================================================
+                          DIRECTORY STRUCTURE
+================================================================================
+
+webserver/
+├── frankenphp            # Web server + PHP (downloaded)
+├── mariadb/              # Database server (downloaded)
+│   ├── bin/
+│   ├── data/
+│   └── run/
+├── htdocs/               # Your PHP app
+├── config/
+│   ├── Caddyfile
+│   └── my.cnf
+├── logs/
+├── install.sh            # Downloads binaries
+├── start.sh
+└── stop.sh
+
+================================================================================
+                               USAGE
+================================================================================
+
+First-time:   ./install.sh
+Start:        ./start.sh
+Stop:         ./stop.sh
+Web:          http://localhost:8080
+MySQL CLI:    ./mariadb/bin/mysql -S ./mariadb/run/mariadb.sock -u root
+
+Ports:        8080 (HTTP), 3307 (MariaDB)
+
+================================================================================

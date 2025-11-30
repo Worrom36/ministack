@@ -1,0 +1,26 @@
+# =============================================================================
+# MINISTACK .gitignore
+# =============================================================================
+
+# Binaries (downloaded by install.sh)
+frankenphp
+mariadb/
+
+# Generated config (created by start.sh at runtime)
+config/my.cnf
+
+# Runtime files
+logs/
+*.log
+*.pid
+*.sock
+*.db
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
