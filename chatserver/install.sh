@@ -182,9 +182,9 @@ phase_config() {
     PingTimeout = $PING_TIMEOUT
     PongTimeout = 20
     
-    # Paths (relative to SCRIPT_DIR)
-    MotdFile = $SCRIPT_DIR/etc/motd.txt
-    PidFile = $SCRIPT_DIR/run/ngircd.pid
+    # Paths (relative - ngircd runs from SCRIPT_DIR)
+    MotdFile = ./etc/motd.txt
+    PidFile = ./run/ngircd.pid
 
 [Limits]
     MaxConnections = $MAX_USERS
