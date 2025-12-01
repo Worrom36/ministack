@@ -9,7 +9,8 @@ A portable, self-contained PHP web stack, IRC chat server, and dynamic DNS updat
 | **FrankenPHP** | ~48MB | Web server + PHP 8.4 in a single binary |
 | ↳ SQLite | *(built-in)* | File-based database included in PHP |
 | **MariaDB** | ~800MB | MySQL-compatible database *(optional)* |
-| **ngIRCd** | ~500KB | Lightweight IRC chat server *(optional)* |
+| **ngIRCd** | ~500KB | Lightweight IRC server *(optional)* |
+| **Ergo** | ~15MB | Modern IRC server with WebSocket *(optional)* |
 | **minidyn** | ~8KB | Dynamic DNS updater *(optional)* |
 
 ## Quick Start
@@ -45,8 +46,10 @@ SQLite is built into PHP — perfect for blogs, small apps, and prototypes.
 | Web | 8080 | — | — |
 | MariaDB | 3307 | `mini` | `stack` |
 | IRC | 6667 | `mini` | `stack` |
+| WebSocket | 6668 | — | — |
 
-No root required — uses unprivileged ports.
+No root required — uses unprivileged ports.  
+*WebSocket port only available with Ergo IRC server.*
 
 ## Directory Structure
 
@@ -63,10 +66,11 @@ webserver/
 └── stop.sh
 
 chatserver/
-├── bin/               # ngIRCd binary (downloaded)
+├── bin/               # IRC server binary (ngIRCd or Ergo)
 ├── etc/               # Configuration files
+├── data/              # Ergo database (if using Ergo)
 ├── logs/              # Log files
-├── install.sh
+├── install.sh         # Choose ngIRCd or Ergo
 ├── start.sh
 └── stop.sh
 
@@ -101,12 +105,23 @@ CLI access:
 
 ## Connecting to IRC
 
-Use any IRC client (mIRC, HexChat, irssi, etc.):
+**Install** (choose ngIRCd or Ergo):
+```bash
+cd chatserver && ./install.sh
+```
+
+| Server | Lightweight | WebSocket |
+|--------|-------------|-----------|
+| ngIRCd | ✅ ~500KB | ❌ No |
+| Ergo | ~15MB | ✅ Yes |
+
+**Connect** with any IRC client (mIRC, HexChat, irssi, etc.):
 
 | Setting | Value |
 |---------|-------|
 | Server | `localhost` (or your host IP) |
 | Port | `6667` |
+| WebSocket | `ws://host:6668` *(Ergo only)* |
 
 Once connected:
 ```

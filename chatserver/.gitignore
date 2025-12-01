@@ -11,8 +11,13 @@ etc/
 # Runtime files
 run/
 logs/
+data/
 *.pid
 *.log
+*.db
+
+# Server type marker
+.server_type
 
 # Temporary files
 *.tmp

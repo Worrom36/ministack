@@ -3,33 +3,39 @@
                          Portable IRC Server
 ================================================================================
 
-STACK:   ngIRCd (self-contained, no root required)
+STACK:   ngIRCd OR Ergo (self-contained, no root required)
 TARGET:  Linux x86_64 / ARM64
 
 ================================================================================
                             COMPONENTS
 ================================================================================
 
-NGIRCD
-  Version:   26.1
+OPTION 1: NGIRCD (Lightweight, no WebSocket)
+  Version:   27
+  Size:      ~1MB
   Homepage:  https://ngircd.barton.de/
   GitHub:    https://github.com/ngircd/ngircd
-  Docs:      https://ngircd.barton.de/documentation.php
+
+OPTION 2: ERGO (Modern, WebSocket support)
+  Version:   2.14.0
+  Size:      ~15MB
+  Homepage:  https://ergo.chat/
+  GitHub:    https://github.com/ergochat/ergo
+  WebSocket: Yes - browsers can connect directly
 
 ================================================================================
                           DIRECTORY STRUCTURE
 ================================================================================
 
 chatserver/
-├── bin/                  # ngIRCd binary (downloaded)
-│   └── ngircd
+├── bin/                  # IRC server binary
+│   └── ngircd OR ergo
 ├── etc/                  # Configuration
-│   ├── ngircd.conf
+│   ├── ngircd.conf OR ircd.yaml
 │   └── motd.txt
+├── data/                 # Ergo database (if using Ergo)
 ├── run/                  # Runtime files
-│   └── ngircd.pid
-├── logs/
-├── install.sh            # Downloads/installs ngIRCd
+├── install.sh            # Choose & install IRC server
 ├── start.sh
 └── stop.sh
 
@@ -37,12 +43,12 @@ chatserver/
                                USAGE
 ================================================================================
 
-First-time:   ./install.sh
+First-time:   ./install.sh  (choose ngIRCd or Ergo)
 Start:        ./start.sh
 Stop:         ./stop.sh
-Connect:      irc://localhost:6667
 
-Port:         6667 (IRC)
+Ports:
+  6667 - IRC (both servers)
+  6668 - WebSocket (Ergo only)
 
 ================================================================================
-

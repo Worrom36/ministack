@@ -1,7 +1,7 @@
 #!/bin/bash
 #===============================================================================
 #  MINISTACK CHAT SERVER INSTALLER
-#  Downloads and sets up ngIRCd portable IRC server
+#  Choose between ngIRCd (lightweight) or Ergo (WebSocket support)
 #===============================================================================
 
 set -e
@@ -25,8 +25,12 @@ log_step()  { printf "${CYAN}[STEP]${NC} %s\n" "$1"; }
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ngIRCd version
+# Versions
 NGIRCD_VERSION="27"
+ERGO_VERSION="2.14.0"
+
+# Server choice: ngircd or ergo
+IRC_SERVER=""
 
 # Default configuration values
 SERVER_NAME="irc.ministack.local"
@@ -34,6 +38,7 @@ SERVER_INFO="Ministack IRC Server"
 ADMIN_NAME="Admin"
 ADMIN_EMAIL="admin@ministack.local"
 IRC_PORT="6667"
+WS_PORT="6668"
 MAX_USERS="50"
 MAX_CHANNELS="20"
 OPER_NAME="mini"
@@ -53,8 +58,25 @@ ask_config() {
     echo ""
     echo "=========================================="
     echo "  MINISTACK Chat Server Installer"
-    echo "  ngIRCd - Lightweight IRC Server"
     echo "=========================================="
+    echo ""
+    echo "Choose IRC server:"
+    echo ""
+    echo "  1) ngIRCd  - Lightweight (~1MB), no WebSocket"
+    echo "  2) Ergo    - Modern (~15MB), has WebSocket for web chat"
+    echo ""
+    
+    while true; do
+        read -p "Select [1/2]: " choice
+        case $choice in
+            1) IRC_SERVER="ngircd"; break;;
+            2) IRC_SERVER="ergo"; break;;
+            *) echo "Please enter 1 or 2";;
+        esac
+    done
+    
+    echo ""
+    echo "--- Server Configuration ---"
     echo ""
     
     read -p "Server name [$SERVER_NAME]: " input
@@ -71,6 +93,12 @@ ask_config() {
     
     read -p "IRC port [$IRC_PORT]: " input
     IRC_PORT="${input:-$IRC_PORT}"
+    
+    # WebSocket port only for Ergo
+    if [ "$IRC_SERVER" = "ergo" ]; then
+        read -p "WebSocket port [$WS_PORT]: " input
+        WS_PORT="${input:-$WS_PORT}"
+    fi
     
     read -p "Max users [$MAX_USERS]: " input
     MAX_USERS="${input:-$MAX_USERS}"
@@ -94,10 +122,12 @@ ask_config() {
     MOTD_TEXT="${input:-$MOTD_TEXT}"
     
     echo ""
-    log_info "Configuration:"
-    log_info "  Server: $SERVER_NAME:$IRC_PORT"
+    log_info "Server: $IRC_SERVER"
+    log_info "  Name: $SERVER_NAME:$IRC_PORT"
+    if [ "$IRC_SERVER" = "ergo" ]; then
+        log_info "  WebSocket: port $WS_PORT"
+    fi
     log_info "  Operator: $OPER_NAME"
-    log_info "  Max users: $MAX_USERS"
     echo ""
 }
 
@@ -117,10 +147,18 @@ phase_directories() {
 }
 
 #-------------------------------------------------------------------------------
-# Phase 2: Install ngIRCd
+# Phase 2: Install IRC Server
 #-------------------------------------------------------------------------------
 
 phase_install() {
+    if [ "$IRC_SERVER" = "ngircd" ]; then
+        install_ngircd
+    else
+        install_ergo
+    fi
+}
+
+install_ngircd() {
     log_step "Installing ngIRCd..."
     
     if [ -f "bin/ngircd" ]; then
@@ -128,7 +166,7 @@ phase_install() {
         return
     fi
     
-    # Check if ngircd is available via package manager or needs compilation
+    # Check if ngircd is available via package manager
     if command -v apt-get &> /dev/null; then
         log_info "Installing ngircd via apt..."
         sudo apt-get update
@@ -144,14 +182,86 @@ phase_install() {
     fi
 }
 
+install_ergo() {
+    log_step "Installing Ergo..."
+    
+    if [ -f "bin/ergo" ]; then
+        log_warn "ergo already exists, skipping"
+        return
+    fi
+    
+    # Determine download URL based on architecture
+    case "$ARCH" in
+        x86_64|amd64)
+            ERGO_ARCH="linux-x86_64"
+            ;;
+        aarch64|arm64)
+            ERGO_ARCH="linux-arm64"
+            ;;
+        armv7l|armhf)
+            ERGO_ARCH="linux-armv7"
+            ;;
+        *)
+            log_error "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+    esac
+    
+    ERGO_URL="https://github.com/ergochat/ergo/releases/download/v${ERGO_VERSION}/ergo-${ERGO_VERSION}-${ERGO_ARCH}.tar.gz"
+    
+    log_info "Downloading Ergo v${ERGO_VERSION}..."
+    curl -L "$ERGO_URL" -o ergo.tar.gz
+    
+    log_info "Extracting..."
+    tar -xzf ergo.tar.gz
+    
+    # Move binary to bin/
+    mv ergo-${ERGO_VERSION}-${ERGO_ARCH}/ergo bin/
+    
+    # Copy default language files
+    mkdir -p data/languages
+    if [ -d "ergo-${ERGO_VERSION}-${ERGO_ARCH}/languages" ]; then
+        cp -r ergo-${ERGO_VERSION}-${ERGO_ARCH}/languages/* data/languages/ 2>/dev/null || true
+    fi
+    
+    # Cleanup
+    rm -rf ergo.tar.gz ergo-${ERGO_VERSION}-${ERGO_ARCH}
+    
+    log_info "Ergo installed"
+}
+
 #-------------------------------------------------------------------------------
 # Phase 3: Create configuration
 #-------------------------------------------------------------------------------
 
 phase_config() {
-    log_step "Creating configuration..."
+    if [ "$IRC_SERVER" = "ngircd" ]; then
+        config_ngircd
+    else
+        config_ergo
+    fi
     
-    # Main config file
+    # Create MOTD file (used by both)
+    cat > etc/motd.txt << EOF
+
+  ⚡ MINISTACK Chat Server ⚡
+
+  $MOTD_TEXT
+
+  Server: $SERVER_NAME
+  Port:   $IRC_PORT
+
+  Channels: #general, #help
+  Operator: /oper $OPER_NAME <password>
+
+EOF
+
+    log_info "Configuration created"
+}
+
+config_ngircd() {
+    log_step "Creating ngIRCd configuration..."
+    
     cat > etc/ngircd.conf << EOF
 #===============================================================================
 # ngIRCd Configuration - Ministack Chat Server
@@ -161,28 +271,22 @@ phase_config() {
     Name = $SERVER_NAME
     Info = $SERVER_INFO
     
-    # Password to connect to server (blank = no password)
     Password = $SERVER_PASS
     
-    # Admin info
     AdminInfo1 = $ADMIN_NAME
     AdminInfo2 = $ADMIN_EMAIL
     AdminEMail = $ADMIN_EMAIL
     
-    # Ports
     Ports = $IRC_PORT
     
-    # Limits
     MaxConnections = $MAX_USERS
     MaxConnectionsIP = 5
     MaxJoins = $MAX_CHANNELS
     MaxNickLength = 15
     
-    # Ping settings
     PingTimeout = $PING_TIMEOUT
     PongTimeout = 20
     
-    # Paths (relative - ngircd runs from SCRIPT_DIR)
     MotdFile = ./etc/motd.txt
     PidFile = ./run/ngircd.pid
 
@@ -192,25 +296,12 @@ phase_config() {
     MaxJoins = $MAX_CHANNELS
 
 [Options]
-    # Allow IRC Operators to use MODE
     OperCanUseMode = yes
-    
-    # Require password for OPER command
     OperServerMode = no
-    
-    # Allow remote users (not just localhost)
     AllowRemoteOper = yes
-    
-    # DNS lookups (disable for speed)
     DNS = no
-    
-    # Ident lookups (disable for speed)
     Ident = no
-    
-    # PAM authentication
     PAM = no
-    
-    # Cloaking (hide user hostnames)
     CloakHost = ministack.user
     CloakHostModeX = ministack.user
     CloakUserToNick = no
@@ -229,33 +320,165 @@ phase_config() {
     Topic = Help and support
     Modes = tn
 EOF
-
-    # MOTD file
-    cat > etc/motd.txt << EOF
-
-  ⚡ MINISTACK Chat Server ⚡
-
-  $MOTD_TEXT
-
-  Server: $SERVER_NAME
-  Port:   $IRC_PORT
-
-  Channels: #general, #help
-  Operator: /oper $OPER_NAME <password>
-
-EOF
-
-    log_info "Configuration created"
 }
+
+config_ergo() {
+    log_step "Creating Ergo configuration..."
+    
+    mkdir -p data
+    
+    # Generate password hash
+    OPER_HASH=$(echo "$OPER_PASS" | ./bin/ergo genpasswd)
+    
+    cat > etc/ircd.yaml << EOF
+# Ergo IRC Server Configuration - Ministack Chat Server
+
+network:
+    name: "$SERVER_NAME"
+
+server:
+    name: "$SERVER_NAME"
+    listeners:
+        ":$IRC_PORT":
+            # Standard IRC port
+        ":$WS_PORT":
+            websocket: true
+            # WebSocket for web clients
+    
+    enforce-utf8: true
+    max-sendq: 96k
+    
+    connection-limits:
+        cidr-len-ipv4: 32
+        cidr-len-ipv6: 64
+        connections-per-subnet: 5
+        exempted: []
+    
+    connection-throttling:
+        enabled: true
+        cidr-len-ipv4: 32
+        cidr-len-ipv6: 64
+        connections-per-period: 6
+        duration: 1m
+        ban-duration: 10m
+        ban-message: "Too many connections"
+        exempted: []
+
+accounts:
+    authentication-enabled: true
+    registration:
+        enabled: true
+        allow-before-connect: true
+        throttling:
+            enabled: true
+            duration: 10m
+            max-attempts: 3
+        bcrypt-cost: 4
+        email-verification:
+            enabled: false
+    login-throttling:
+        enabled: true
+        duration: 1m
+        max-attempts: 3
+    skip-server-password: false
+    nick-reservation:
+        enabled: true
+        additional-nick-limit: 2
+        method: strict
+
+channels:
+    default-modes: +nt
+    max-channels-per-client: $MAX_CHANNELS
+    registration:
+        enabled: true
+
+opers:
+    $OPER_NAME:
+        password: "$OPER_HASH"
+        whois-line: "is a server operator"
+        class: "server-admin"
+
+oper-classes:
+    server-admin:
+        title: "Server Admin"
+        capabilities:
+            - "local_kill"
+            - "local_ban"
+            - "local_unban"
+            - "rehash"
+            - "die"
+            - "samode"
+            - "kick"
+
+limits:
+    nicklen: 32
+    identlen: 20
+    channellen: 64
+    topiclen: 390
+    awaylen: 390
+    kicklen: 390
+    linelen:
+        rest: 2048
+    multiline:
+        max-bytes: 4096
+        max-lines: 100
+
+history:
+    enabled: true
+    channel-length: 1024
+    client-length: 256
+    autoresize-window: 3d
+    autoreplay-on-join: 100
+    chathistory-maxmessages: 1000
+    znc-maxmessages: 2048
+    restrictions:
+        expire-time: 1w
+        query-cutoff: "none"
+        grace-period: 1h
+
+logging:
+    - method: stderr
+      level: info
+      type: "*"
+
+datastore:
+    path: ./data/ircd.db
+    autoupgrade: true
+
+languages:
+    enabled: false
+    path: ./data/languages
+    default: en
+
+motd-formatting: true
+motd: ./etc/motd.txt
+
+roleplay:
+    enabled: false
+
+fakelag:
+    enabled: false
+EOF
+}
+
 
 #-------------------------------------------------------------------------------
 # Phase 4: Create start/stop scripts
 #-------------------------------------------------------------------------------
 
 phase_scripts() {
-    log_step "Creating start/stop scripts..."
+    if [ "$IRC_SERVER" = "ngircd" ]; then
+        scripts_ngircd
+    else
+        scripts_ergo
+    fi
     
-    # Start script
+    log_info "Scripts created"
+}
+
+scripts_ngircd() {
+    log_step "Creating ngIRCd start/stop scripts..."
+    
     cat > start.sh << EOF
 #!/bin/bash
 SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
@@ -275,7 +498,6 @@ echo "=========================================="
 EOF
     chmod +x start.sh
     
-    # Stop script
     cat > stop.sh << EOF
 #!/bin/bash
 SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
@@ -291,8 +513,58 @@ pkill -f "ngircd.*ministack" 2>/dev/null || true
 echo "IRC Server stopped."
 EOF
     chmod +x stop.sh
+}
+
+scripts_ergo() {
+    log_step "Creating Ergo start/stop scripts..."
     
-    log_info "Scripts created"
+    cat > start.sh << EOF
+#!/bin/bash
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+cd "\$SCRIPT_DIR"
+
+echo "Starting Ergo..."
+./bin/ergo run --conf ./etc/ircd.yaml &
+echo \$! > ./run/ergo.pid
+
+sleep 1
+echo ""
+echo "=========================================="
+echo "  IRC Server is running!"
+echo "=========================================="
+echo "  Server:    $SERVER_NAME"
+echo "  IRC Port:  $IRC_PORT"
+echo "  WebSocket: $WS_PORT (ws://host:$WS_PORT)"
+echo ""
+echo "  IRC client: /server localhost $IRC_PORT"
+echo "  Web chat:   Connect via WebSocket"
+echo "=========================================="
+EOF
+    chmod +x start.sh
+    
+    cat > stop.sh << EOF
+#!/bin/bash
+SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+cd "\$SCRIPT_DIR"
+
+echo "Stopping Ergo..."
+if [ -f "./run/ergo.pid" ]; then
+    kill \$(cat ./run/ergo.pid) 2>/dev/null || true
+    rm -f ./run/ergo.pid
+fi
+pkill -f "ergo.*ministack" 2>/dev/null || true
+
+echo "IRC Server stopped."
+EOF
+    chmod +x stop.sh
+}
+
+#-------------------------------------------------------------------------------
+# Phase 5: Save server type for reference
+#-------------------------------------------------------------------------------
+
+phase_save_type() {
+    echo "$IRC_SERVER" > .server_type
 }
 
 #-------------------------------------------------------------------------------
@@ -306,10 +578,11 @@ main() {
     phase_install
     phase_config
     phase_scripts
+    phase_save_type
     
     echo ""
     echo "=========================================="
-    log_info "Installation complete!"
+    log_info "Installation complete! ($IRC_SERVER)"
     echo "=========================================="
     echo ""
     echo "  To start:  ./start.sh"
@@ -318,6 +591,13 @@ main() {
     echo "  Connect with any IRC client:"
     echo "  Server: localhost"
     echo "  Port:   $IRC_PORT"
+    
+    if [ "$IRC_SERVER" = "ergo" ]; then
+        echo ""
+        echo "  WebSocket for web chat:"
+        echo "  ws://localhost:$WS_PORT"
+    fi
+    
     echo ""
     echo "  Operator login: /oper $OPER_NAME $OPER_PASS"
     echo ""
