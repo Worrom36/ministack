@@ -1,6 +1,6 @@
 # ⚡ MINISTACK
 
-A portable, self-contained PHP web stack and IRC chat server.
+A portable, self-contained PHP web stack, IRC chat server, and dynamic DNS updater.
 
 ## What's Installed
 
@@ -10,6 +10,7 @@ A portable, self-contained PHP web stack and IRC chat server.
 | ↳ SQLite | *(built-in)* | File-based database included in PHP |
 | **MariaDB** | ~800MB | MySQL-compatible database *(optional)* |
 | **ngIRCd** | ~500KB | Lightweight IRC chat server *(optional)* |
+| **minidyn** | ~8KB | Dynamic DNS updater *(optional)* |
 
 ## Quick Start
 
@@ -68,6 +69,13 @@ chatserver/
 ├── install.sh
 ├── start.sh
 └── stop.sh
+
+minidyn/
+├── data/              # IP cache and logs
+├── install.sh         # Configure DDNS provider
+├── update.sh          # Manual IP update
+├── start.sh           # Start background updater
+└── stop.sh
 ```
 
 ## Requirements
@@ -105,3 +113,15 @@ Once connected:
 /join #general
 /oper mini stack
 ```
+
+## Dynamic DNS
+
+For remote access with a dynamic IP:
+
+```bash
+cd minidyn
+./install.sh    # Configure your DDNS provider
+./start.sh      # Start background updater
+```
+
+Supported providers: No-IP, DuckDNS, Dynu, FreeDNS

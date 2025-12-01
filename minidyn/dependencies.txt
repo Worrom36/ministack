@@ -1,0 +1,44 @@
+================================================================================
+                              MINISTACK
+                       Minimal Dynamic DNS Updater
+================================================================================
+
+STACK:   Pure bash + curl (no external dependencies)
+TARGET:  Any Linux with curl
+LICENSE: Original work, no GPL dependencies
+
+================================================================================
+                         SUPPORTED PROVIDERS
+================================================================================
+
+NO-IP       https://www.noip.com/
+DUCKDNS     https://www.duckdns.org/
+DYNU        https://www.dynu.com/
+FREEDNS     https://freedns.afraid.org/
+
+================================================================================
+                          DIRECTORY STRUCTURE
+================================================================================
+
+minidyn/
+├── install.sh        # Configure provider credentials
+├── update.sh         # Check IP and update DDNS
+├── start.sh          # Start background updater
+├── stop.sh           # Stop background updater
+├── config            # Provider credentials (gitignored)
+└── data/
+    ├── last_ip       # Last known public IP
+    └── minidyn.log   # Update log
+
+================================================================================
+                               USAGE
+================================================================================
+
+First-time:   ./install.sh
+Start:        ./start.sh
+Stop:         ./stop.sh
+Manual:       ./update.sh
+View log:     cat data/minidyn.log
+
+================================================================================
+

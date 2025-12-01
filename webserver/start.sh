@@ -24,11 +24,11 @@ socket  = $SCRIPT_DIR/mariadb/run/mariadb.sock
 port    = 3307
 EOF
 
-    echo "Starting MariaDB..."
+echo "Starting MariaDB..."
     ./mariadb/bin/mariadbd-safe --defaults-file=./config/my.cnf &
-    
-    echo "Waiting for MariaDB..."
-    sleep 3
+
+echo "Waiting for MariaDB..."
+sleep 3
 fi
 
 echo "Starting FrankenPHP..."
@@ -42,7 +42,7 @@ echo "  MINISTACK is running!"
 echo "=========================================="
 echo "  Web:    http://localhost:8080"
 if [ -d "mariadb/bin" ]; then
-    echo "  MySQL:  localhost:3307"
+echo "  MySQL:  localhost:3307"
 else
     echo "  DB:     SQLite (htdocs/data.db)"
 fi

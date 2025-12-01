@@ -1,12 +1,42 @@
 <?php
+// MariaDB status
 $dbStatus = false;
 $dbError = '';
 try {
-    $pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'root', '');
+    $pdo = new PDO('mysql:host=127.0.0.1;port=3307', 'mini', 'stack');
     $dbStatus = true;
     $dbVersion = $pdo->query('SELECT VERSION()')->fetchColumn();
 } catch (Exception $e) {
     $dbError = $e->getMessage();
+}
+
+// IRC status
+$ircStatus = false;
+$ircError = 'Not running';
+$fp = @fsockopen('127.0.0.1', 6667, $errno, $errstr, 1);
+if ($fp) {
+    $ircStatus = true;
+    fclose($fp);
+}
+
+// DDNS status
+$ddnsStatus = false;
+$ddnsInfo = 'Not running';
+$ddnsPidFile = __DIR__ . '/../../minidyn/data/minidyn.pid';
+$ddnsConfig = __DIR__ . '/../../minidyn/config';
+if (file_exists($ddnsPidFile)) {
+    $pid = trim(file_get_contents($ddnsPidFile));
+    if (file_exists("/proc/$pid")) {
+        $ddnsStatus = true;
+        if (file_exists($ddnsConfig)) {
+            $config = parse_ini_file($ddnsConfig);
+            $host = $config['DDNS_HOST'] ?? '';
+            $interval = $config['INTERVAL'] ?? '';
+            $ddnsInfo = $host . ($interval ? " (every {$interval}m)" : '');
+        } else {
+            $ddnsInfo = 'Running';
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -30,6 +60,12 @@ try {
         </div>
         <div class="status <?= $dbStatus ? 'ok' : 'err' ?>">
             <?= $dbStatus ? "✓ MariaDB: $dbVersion" : "✗ MariaDB: $dbError" ?>
+        </div>
+        <div class="status <?= $ircStatus ? 'ok' : 'err' ?>">
+            <?= $ircStatus ? "✓ IRC: Port 6667" : "✗ IRC: $ircError" ?>
+        </div>
+        <div class="status <?= $ddnsStatus ? 'ok' : 'err' ?>">
+            <?= $ddnsStatus ? "✓ DDNS: $ddnsInfo" : "✗ DDNS: $ddnsInfo" ?>
         </div>
     </div>
 </body>
