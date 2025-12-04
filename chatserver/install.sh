@@ -62,15 +62,15 @@ ask_config() {
     echo ""
     echo "Choose IRC server:"
     echo ""
-    echo "  1) ngIRCd  - Lightweight (~1MB), no WebSocket"
-    echo "  2) Ergo    - Modern (~15MB), has WebSocket for web chat"
+    echo "  1) Ergo    - Modern (~15MB), has WebSocket for web chat [default]"
+    echo "  2) ngIRCd  - Lightweight (~1MB), no WebSocket"
     echo ""
     
     while true; do
         read -p "Select [1/2]: " choice
         case $choice in
-            1) IRC_SERVER="ngircd"; break;;
-            2) IRC_SERVER="ergo"; break;;
+            1|"") IRC_SERVER="ergo"; break;;
+            2) IRC_SERVER="ngircd"; break;;
             *) echo "Please enter 1 or 2";;
         esac
     done
