@@ -1,6 +1,10 @@
 {
 	"folders": [
 		{
+			"name": "MINISTACK",
+			"path": "."
+		},
+		{
 			"name": "Web Server",
 			"path": "webserver"
 		},
