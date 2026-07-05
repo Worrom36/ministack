@@ -1,0 +1,42 @@
+================================================================================
+                              NUCLEUSCMS
+                    Classic PHP blog CMS for MINISTACK
+================================================================================
+
+VERSION:  3.8.0-dev (GitHub v3.8dev branch)
+SOURCE:   https://github.com/NucleusCMS/NucleusCMS
+DOWNLOAD: https://github.com/NucleusCMS/NucleusCMS/archive/refs/heads/v3.8dev.zip
+
+REQUIRES: FrankenPHP (webserver), MariaDB, curl or wget, unzip or python3
+DEPLOY:   webserver/htdocs/nucleus/  (default subfolder)
+
+PATCHES (install.sh — do not edit htdocs by hand):
+  - php_version_check.php: allow PHP 8.4 (FrankenPHP)
+  - globalfunctions.inc.php: remove deprecated E_STRICT on PHP 8.4
+  - ADMIN.php + login.blade.php: replace hardcoded Japanese with English
+  - install-config.php: MINISTACK DB defaults + FrankenPHP auth bypass
+  - nucleus_config.debug: set to 0 after wizard
+
+SKIN BUNDLE (included/skins-bundle.zip — committed, ~38 MB):
+  - Source: skins.nucleuscms.org via Wayback Machine (2016 snapshot)
+  - ~185 community skins bundled; default blog skin: grey
+  - Rebuild: ./fetch-skin-bundle.sh (maintainer; see included/skins-manifest.json)
+  - Skip at install: ./install.sh --no-skin-bundle
+
+================================================================================
+                               USAGE
+================================================================================
+
+Prerequisite: webserver installed WITH MariaDB (not SQLite-only)
+
+Install:          ./install.sh
+Re-apply patches: ./install.sh --repatch-only
+Skip skin bundle: ./install.sh --no-skin-bundle
+Wizard only:      ./install.sh --wizard-only
+Rebuild skins:    ./fetch-skin-bundle.sh
+
+Blog URL:     http://localhost:8080/nucleus/
+
+No start/stop scripts — served by FrankenPHP via webserver/start.sh
+
+================================================================================

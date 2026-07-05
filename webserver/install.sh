@@ -251,6 +251,40 @@ phase_init_db() {
 }
 
 #-------------------------------------------------------------------------------
+# MariaDB helpers
+#-------------------------------------------------------------------------------
+
+mariadb_socket() {
+    echo "$SCRIPT_DIR/mariadb/run/mariadb.sock"
+}
+
+wait_for_mariadb() {
+    local socket
+    socket=$(mariadb_socket)
+    local i
+
+    for i in $(seq 1 30); do
+        if [ -S "$socket" ]; then
+            if ./mariadb/bin/mariadb --socket="$socket" -u root -e "SELECT 1" &>/dev/null; then
+                return 0
+            fi
+            if ./mariadb/bin/mariadb --socket="$socket" -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" -e "SELECT 1" &>/dev/null; then
+                return 0
+            fi
+        fi
+        sleep 1
+    done
+
+    log_error "MariaDB did not become ready within 30s"
+    return 1
+}
+
+mariadb_admin_configured() {
+    ./mariadb/bin/mariadb --socket="$(mariadb_socket)" \
+        -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" -e "SELECT 1" &>/dev/null
+}
+
+#-------------------------------------------------------------------------------
 # Phase 5: Configure MariaDB users
 #-------------------------------------------------------------------------------
 
@@ -272,15 +306,28 @@ bind-address = 127.0.0.1
 socket  = $SCRIPT_DIR/mariadb/run/mariadb.sock
 EOF
 
-    # Start MariaDB temporarily
-    log_info "Starting MariaDB temporarily..."
-    ./mariadb/bin/mariadbd-safe --defaults-file=./config/my.cnf &
-    MARIADB_PID=$!
-    sleep 4
+    local started_here=false
+    if ! ./mariadb/bin/mariadb-admin --socket="$(mariadb_socket)" ping &>/dev/null 2>&1; then
+        log_info "Starting MariaDB temporarily..."
+        ./mariadb/bin/mariadbd-safe --defaults-file=./config/my.cnf &
+        started_here=true
+    fi
+
+    wait_for_mariadb || exit 1
+
+    if mariadb_admin_configured; then
+        log_warn "Admin user '$DB_ADMIN_USER' already configured, skipping"
+        if [ "$started_here" = true ]; then
+            log_info "Stopping MariaDB..."
+            ./mariadb/bin/mariadb-admin --socket="$(mariadb_socket)" -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" shutdown 2>/dev/null || true
+            sleep 2
+        fi
+        return
+    fi
     
     # Create admin user and secure root
     log_info "Creating admin user '$DB_ADMIN_USER'..."
-    ./mariadb/bin/mysql --socket=./mariadb/run/mariadb.sock -u root << EOF
+    ./mariadb/bin/mariadb --socket="$(mariadb_socket)" -u root << EOF
 -- Create admin user with full privileges
 CREATE USER '$DB_ADMIN_USER'@'localhost' IDENTIFIED BY '$DB_ADMIN_PASS';
 GRANT ALL PRIVILEGES ON *.* TO '$DB_ADMIN_USER'@'localhost' WITH GRANT OPTION;
@@ -297,7 +344,7 @@ EOF
     # Create extra user if requested
     if [ "$CREATE_EXTRA_USER" = true ]; then
         log_info "Creating extra user '$DB_EXTRA_USER'..."
-        ./mariadb/bin/mysql --socket=./mariadb/run/mariadb.sock -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" << EOF
+        ./mariadb/bin/mariadb --socket="$(mariadb_socket)" -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" << EOF
 -- Create extra user with normal privileges
 CREATE USER '$DB_EXTRA_USER'@'localhost' IDENTIFIED BY '$DB_EXTRA_PASS';
 CREATE USER '$DB_EXTRA_USER'@'127.0.0.1' IDENTIFIED BY '$DB_EXTRA_PASS';
@@ -310,10 +357,11 @@ FLUSH PRIVILEGES;
 EOF
     fi
     
-    # Stop MariaDB
-    log_info "Stopping MariaDB..."
-    ./mariadb/bin/mysqladmin --socket=./mariadb/run/mariadb.sock -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" shutdown 2>/dev/null || kill $MARIADB_PID 2>/dev/null || true
-    sleep 2
+    if [ "$started_here" = true ]; then
+        log_info "Stopping MariaDB..."
+        ./mariadb/bin/mariadb-admin --socket="$(mariadb_socket)" -u "$DB_ADMIN_USER" -p"$DB_ADMIN_PASS" shutdown 2>/dev/null || true
+        sleep 2
+    fi
     
     log_info "MariaDB users configured"
 }

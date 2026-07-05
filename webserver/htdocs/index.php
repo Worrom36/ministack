@@ -38,6 +38,43 @@ if (file_exists($ddnsPidFile)) {
         }
     }
 }
+
+// NucleusCMS status
+$nucleusStatus = false;
+$nucleusInfo = 'Not installed';
+$nucleusConfigFile = __DIR__ . '/../../nucleuscms/config';
+if (file_exists($nucleusConfigFile)) {
+    $nucleusConfig = parse_ini_file($nucleusConfigFile);
+    $subfolder = $nucleusConfig['SUBFOLDER'] ?? 'nucleus';
+    $deployPath = __DIR__ . '/' . $subfolder;
+    $installUrl = "/{$subfolder}/install/";
+    $blogUrl = "/{$subfolder}/";
+
+    if (is_dir($deployPath)) {
+        if (file_exists("$deployPath/install/index.php")) {
+            $nucleusInfo = "Setup pending — <a href=\"$installUrl\">finish install</a>";
+        } elseif (file_exists("$deployPath/extra/config.php") || file_exists("$deployPath/config.php")) {
+            $cmsConfigFile = file_exists("$deployPath/config.php")
+                ? "$deployPath/config.php"
+                : "$deployPath/extra/config.php";
+            $cmsConfig = file_get_contents($cmsConfigFile);
+            $isPlaceholder = strpos($cmsConfig, "'hostname'") !== false
+                || strpos($cmsConfig, "'databasename'") !== false
+                || strpos($cmsConfig, "\$DB_HOST = 'hostname'") !== false
+                || strpos($cmsConfig, "\$DB_DATABASE = 'databasename'") !== false;
+            if (!$isPlaceholder) {
+                $nucleusStatus = true;
+                $nucleusInfo = "<a href=\"$blogUrl\">/$subfolder/</a>";
+            } else {
+                $nucleusInfo = "Deployed — <a href=\"$installUrl\">run installer</a>";
+            }
+        } else {
+            $nucleusInfo = 'Deployed (config missing)';
+        }
+    } else {
+        $nucleusInfo = 'Configured but not deployed';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -50,6 +87,7 @@ if (file_exists($ddnsPidFile)) {
         .status { padding: 1rem; border-radius: 8px; margin: 1rem 0; }
         .ok { background: #1e4620; border: 1px solid #4caf50; }
         .err { background: #4a1c1c; border: 1px solid #f44336; }
+        a { color: #00d9ff; }
     </style>
 </head>
 <body>
@@ -66,6 +104,9 @@ if (file_exists($ddnsPidFile)) {
         </div>
         <div class="status <?= $ddnsStatus ? 'ok' : 'err' ?>">
             <?= $ddnsStatus ? "✓ DDNS: $ddnsInfo" : "✗ DDNS: $ddnsInfo" ?>
+        </div>
+        <div class="status <?= $nucleusStatus ? 'ok' : 'err' ?>">
+            <?= $nucleusStatus ? "✓ NucleusCMS: $nucleusInfo" : "✗ NucleusCMS: $nucleusInfo" ?>
         </div>
     </div>
 </body>

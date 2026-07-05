@@ -6,6 +6,10 @@
 frankenphp
 mariadb/
 
+# htdocs — deployed apps and user content (landing page stays in repo)
+htdocs/*
+!htdocs/index.php
+
 # Generated config (created by start.sh at runtime)
 config/my.cnf
 

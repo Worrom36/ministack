@@ -1,7 +1,21 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"name": "Web Server",
+			"path": "webserver"
+		},
+		{
+			"name": "Chat Server",
+			"path": "chatserver"
+		},
+		{
+			"name": "MiniDyn",
+			"path": "minidyn"
+		},
+		{
+			"name": "NucleusCMS",
+			"path": "nucleuscms"
 		}
-	]
+	],
+	"settings": {}
 }

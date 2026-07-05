@@ -1,6 +1,6 @@
 # ⚡ MINISTACK
 
-A portable, self-contained PHP web stack, IRC chat server, and dynamic DNS updater.
+A portable, self-contained PHP web stack, IRC chat server, dynamic DNS updater, and blog CMS.
 
 ## What's Installed
 
@@ -12,6 +12,7 @@ A portable, self-contained PHP web stack, IRC chat server, and dynamic DNS updat
 | **ngIRCd** | ~500KB | Lightweight IRC server *(optional)* |
 | **Ergo** | ~15MB | Modern IRC server with WebSocket *(optional)* |
 | **minidyn** | ~8KB | Dynamic DNS updater *(optional)* |
+| **NucleusCMS** | ~1MB + ~30MB skins | Classic PHP blog CMS v3.8dev *(optional)* |
 
 ## Quick Start
 
@@ -80,6 +81,16 @@ minidyn/
 ├── update.sh          # Manual IP update
 ├── start.sh           # Start background updater
 └── stop.sh
+
+nucleuscms/
+├── install.sh            # Download, deploy, and configure NucleusCMS
+├── fetch-skin-bundle.sh  # Rebuild skin bundle from Wayback (maintainer)
+├── dependencies.txt      # Version and download info
+└── included/             # Internal assets (used by install.sh)
+    ├── finish-install.sh
+    ├── import-skins.php
+    ├── skins-bundle.zip
+    └── skins-manifest.json
 ```
 
 ## Requirements
@@ -140,3 +151,38 @@ cd minidyn
 ```
 
 Supported providers: No-IP, DuckDNS, Dynu, FreeDNS
+
+## NucleusCMS Blog
+
+NucleusCMS v3.8dev from GitHub. **Requires MariaDB** — not compatible with SQLite-only webserver installs.
+
+Fully automated install (no browser wizard needed):
+
+```bash
+cd nucleuscms
+./install.sh    # deploy + configure with MINISTACK defaults
+```
+
+Defaults: admin `mini`/`stack`, database `nucleus`, blog at `/nucleus/`, default skin **grey**.
+
+The installer includes `included/skins-bundle.zip` (~185 of 191 community skins from the historical Nucleus skins site). All skins are deployed and imported into the database automatically. Use `--no-skin-bundle` for a minimal install (core skins only).
+
+Options:
+
+```bash
+./install.sh --admin-pass mypass --blog-name "My Blog"
+./install.sh --no-skin-bundle     # skip bundled skin library
+./install.sh --skip-wizard        # deploy files only
+./install.sh --wizard-only        # run wizard on existing deploy
+./install.sh --repatch-only       # re-patch + redeploy/import skins
+./fetch-skin-bundle.sh            # rebuild skins-bundle.zip (maintainer)
+```
+
+| What | Value |
+|------|-------|
+| Blog | http://localhost:8080/nucleus/ |
+| Admin | http://localhost:8080/nucleus/nucleus/ |
+| Login | `mini` / `stack` |
+| Database | `nucleus` @ `127.0.0.1:3307` (user `mini`, password `stack`) |
+
+No start/stop scripts — NucleusCMS is served by FrankenPHP alongside your other htdocs content.
