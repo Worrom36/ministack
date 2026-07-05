@@ -80,7 +80,7 @@ ask_mariadb() {
     echo ""
     
     while true; do
-        read -p "Install MariaDB? [y/N]: " yn
+        read -p "Install MariaDB? (Required for NucleusCMS) [y/N]: " yn
         case $yn in
             [Yy]* ) INSTALL_MARIADB=true; break;;
             [Nn]* ) INSTALL_MARIADB=false; break;;
