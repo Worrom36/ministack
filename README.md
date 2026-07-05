@@ -154,7 +154,7 @@ Supported providers: No-IP, DuckDNS, Dynu, FreeDNS
 
 ## NucleusCMS Blog
 
-NucleusCMS v3.8dev from GitHub. **Requires MariaDB** — not compatible with SQLite-only webserver installs.
+NucleusCMS v3.8dev from GitHub.
 
 Fully automated install (no browser wizard needed):
 
