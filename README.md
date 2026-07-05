@@ -1,6 +1,6 @@
 # ⚡ MINISTACK
 
-A portable, self-contained PHP web stack, IRC chat server, dynamic DNS updater, and blog CMS/installer.
+A portable, self-contained installer for PHP web stack, IRC chat server, dynamic DNS updater, and blog CMS.
 
 ## What's Installed
 
